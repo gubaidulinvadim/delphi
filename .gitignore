@@ -10,3 +10,8 @@
 /results.csv
 /tmci_scan
 /tmci_scanWlong
+*.h5
+*.svg
+*.scv
+*-checkpoint.ipynb
+*-checkpoint.py
