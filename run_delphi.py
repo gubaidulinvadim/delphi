@@ -9,7 +9,7 @@ from utils import get_parser_for_delphi
 
 
 def read_impedance(filename):
-    f = pd.read_csv('Zydip.dat', sep='\t', header=None)
+    f = pd.read_csv(filename, sep='\t', header=None)
     freqs = f[0][f[0] > 0]
     Zre = f[1][f[0] > 0]
     Zim = f[2][f[0] > 0]
@@ -17,7 +17,16 @@ def read_impedance(filename):
     return freqs, Z
 
 
-def run_bunch_current_scan(impedance_filename, ID_state='open', sigma_z=9e-12, plane='vertical', Qp=0.0, min_value=0.1, max_value=5.0, n_scan_points=50, M=1):
+def run_bunch_current_scan(impedance_filename='/home/dockeruser/delphi/Zydip.dat',
+                           ID_state='open',
+                           sigma_z=9e-12,
+                           plane='vertical',
+                           Qp=0.0,
+                           min_value=0.1,
+                           max_value=5.0,
+                           n_scan_points=50,
+                           M=1,
+                           Q_s=0.0021):
     freqs, Z = read_impedance(impedance_filename)
     ring = v2366(IDs=ID_state, load_lattice=False)
 
@@ -61,8 +70,7 @@ def run_bunch_current_scan(impedance_filename, ID_state='open', sigma_z=9e-12, p
             freqZ=freqs,
             coefdamper=coefdamper,
             coefZ=coefZ,
-            # ring.synchrotron_tune(1.8e6)*ring.omega0,
-            omegas=1.8e-3*ring.omega0,
+            omegas=Q_s*ring.omega0,
             flageigenvect=True,
             optimized_convergence=True,
             lmaxold=-1,
@@ -80,14 +88,23 @@ def run_bunch_current_scan(impedance_filename, ID_state='open', sigma_z=9e-12, p
             }, index=[k])
             results = pd.concat([results, result], ignore_index=True)
         eigvecs_list.append(eigvecs)
-    results.to_csv(path_or_buf='delphi(sigma_z={:.1e},plane={:},Qp={:},M={:}).csv'.format(
-        sigma_z, plane, Qp, M), sep='\t')
+    results.to_csv(path_or_buf='delphi(sigma_z={:.1e},plane={:},Qp={:},M={:},Q_s={:.1e}).csv'.format(
+        sigma_z, plane, Qp, M, Q_s), sep='\t')
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Qp={:}).npy'.format(
     # sigma_z, plane, Qp), np.array(eigvecs_list, dtype=object))
     return results
 
 
-def run_chroma_scan(impedance_filename, ID_state='open', sigma_z=9e-12, plane='vertical', Ib=1.2e-3, min_value=0.1, max_value=5.0, n_scan_points=50, M=1):
+def run_chroma_scan(impedance_filename='/home/dockeruser/delphi/Zydip.dat',
+                    ID_state='open',
+                    sigma_z=9e-12,
+                    plane='vertical',
+                    Ib=1.2e-3,
+                    min_value=0.1,
+                    max_value=5.0,
+                    n_scan_points=50,
+                    M=1,
+                    Q_s=0.0021):
     freqs, Z = read_impedance(impedance_filename)
     ring = v2366(IDs=ID_state, load_lattice=False)
     taub = 4*sigma_z
@@ -97,7 +114,7 @@ def run_chroma_scan(impedance_filename, ID_state='open', sigma_z=9e-12, plane='v
                                     'eigvals_re',
                                     'eigvals_im',
                                     'Qp',
-                                    'FinalBunchLength'])
+                                    'BunchLength'])
     results_h5py = hp.File('delphi_resultssigma_z={:.1e},plane={:},Ib={:}).h5'.format(
         sigma_z, plane, Ib), 'w')
 
@@ -144,7 +161,7 @@ def run_chroma_scan(impedance_filename, ID_state='open', sigma_z=9e-12, plane='v
             freqZ=freqs,
             coefdamper=coefdamper,
             coefZ=coefZ,
-            omegas=ring.synchrotron_tune(1.8e6)*ring.omega0,
+            omegas=Q_s*ring.omega0,
             flageigenvect=True,
             optimized_convergence=True,
             lmaxold=-1,
@@ -162,8 +179,8 @@ def run_chroma_scan(impedance_filename, ID_state='open', sigma_z=9e-12, plane='v
             }, index=[k])
             results = pd.concat([results, result], ignore_index=True)
         eigvecs_list.append(eigvecs)
-    results.to_csv(path_or_buf='delphi(sigma_z={:.1e},plane={:},Ib={:},M={:}).csv'.format(
-        sigma_z, plane, Ib, M), sep='\t')
+    results.to_csv(path_or_buf='delphi(sigma_z={:.1e},plane={:},Ib={:},M={:},Q_s={:.1e}).csv'.format(
+        sigma_z, plane, Ib, M, Q_s), sep='\t')
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Ib={:}).npy'.format(
     # sigma_z, plane, Ib), np.array(eigvecs_list, dtype=object))
     return results
@@ -180,17 +197,10 @@ if __name__ == '__main__':
                         Ib=args.current,
                         min_value=args.min_value,
                         max_value=args.max_value,
-                        n_scan_points=args.n_scan_points)
+                        n_scan_points=args.n_scan_points,
+                        Q_s=args.Q_s)
     elif args.scan_type == 'sb_current':
-        run_bunch_current_scan(impedance_filename=args.filename,
-                               ID_state=args.ID_state,
-                               sigma_z=args.sigma_z,
-                               plane=args.plane,
-                               Qp=args.chromaticity,
-                               min_value=args.min_value,
-                               max_value=args.max_value,
-                               n_scan_points=args.n_scan_points)
-    elif args.scan_type == 'mb_chromaticity':
+        print("running a single bunch current scan")
         run_bunch_current_scan(impedance_filename=args.filename,
                                ID_state=args.ID_state,
                                sigma_z=args.sigma_z,
@@ -199,8 +209,8 @@ if __name__ == '__main__':
                                min_value=args.min_value,
                                max_value=args.max_value,
                                n_scan_points=args.n_scan_points,
-                               M=416)
-    elif args.scan_type == 'mb_current':
+                               Q_s=args.Q_s)
+    elif args.scan_type == 'mb_chromaticity':
         run_chroma_scan(impedance_filename=args.filename,
                         ID_state=args.ID_state,
                         sigma_z=args.sigma_z,
@@ -209,4 +219,18 @@ if __name__ == '__main__':
                         min_value=args.min_value,
                         max_value=args.max_value,
                         n_scan_points=args.n_scan_points,
-                        M=416)
+                        M=416,
+                        Q_s=args.Q_s)
+    elif args.scan_type == 'mb_current':
+        run_bunch_current_scan(impedance_filename=args.filename,
+                               ID_state=args.ID_state,
+                               sigma_z=args.sigma_z,
+                               plane=args.plane,
+                               Qp=args.chromaticity,
+                               min_value=args.min_value,
+                               max_value=args.max_value,
+                               n_scan_points=args.n_scan_points,
+                               M=416,
+                               Q_s=args.Q_s)
+    else:
+        print('Scan type is not supported.')
