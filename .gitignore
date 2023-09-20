@@ -12,6 +12,7 @@
 /tmci_scanWlong
 *.h5
 *.svg
-*.scv
 *-checkpoint.ipynb
 *-checkpoint.py
+*.pyc
+*.csv
