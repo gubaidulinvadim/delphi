@@ -1,0 +1,13 @@
+import os
+if __name__ == '__main__':
+    os.system('python submission.py --ID_state open --filename Zydip_IDopen.dat --sigma_z 8.52e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Over_tcbi_zero_b --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state open --filename Zydip_IDopen.dat --sigma_z 14e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Over_tcbi_zero_z --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state open --filename Zydip_IDopen.dat --sigma_z 40e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 0.7e-3 --job_name Over_tcbi_zero_h --job_time 10000 --sub_mode slurm --n_max 415')
+
+    os.system('python submission.py --ID_state close --filename Zydip_IDclose.dat --sigma_z 8.52e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Cver_tcbi_zero_b --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state close --filename Zydip_IDclose.dat --sigma_z 14e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Cver_tcbi_zero_z --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state close --filename Zydip_IDclose.dat --sigma_z 40e-12 --plane vertical --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 0.7e-3 --job_name Cver_tcbi_zero_h --job_time 10000 --sub_mode slurm --n_max 415')
+
+    os.system('python submission.py --ID_state close --filename Zxdip_IDclose.dat --sigma_z 8.52e-12 --plane horizontal --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Chor_tcbi_zero_b --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state close --filename Zxdip_IDclose.dat --sigma_z 14e-12 --plane horizontal --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 2.117e-3 --job_name Chor_tcbi_zero_z --job_time 10000 --sub_mode slurm --n_max 415')
+    os.system('python submission.py --ID_state close --filename Zxdip_IDclose.dat --sigma_z 40e-12 --plane horizontal --scan_type mb_current --chromaticity 0 --min_value 0.001 --max_value 0.1 --n_scan_points 100 --Q_s 0.7e-3 --job_name Chor_tcbi_zero_h --job_time 10000 --sub_mode slurm --n_max 415')
