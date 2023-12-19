@@ -85,9 +85,9 @@ def run_bunch_current_scan(
                 particle="electron",
             )
             beta_mbtrack2 = (
-                ring.optics.beta(0)[1]
+                ring.optics.local_beta[1]
                 if plane == "vertical"
-                else ring.optics.beta(0)[0]
+                else ring.optics.local_beta[0]
             )
             beta_delphi = ring.L / tune / 2 / np.pi
             coefZ *= beta_mbtrack2 / beta_delphi
@@ -220,16 +220,16 @@ def run_chroma_scan(
                 dnormfactor=np.infty,
                 taub=taub,
                 dphase=0,
-                M=1,
+                M=M,
                 Nb=Nb,
                 gamma=ring.gamma,
                 Q=tune,
                 particle="electron",
             )
             beta_mbtrack2 = (
-                ring.optics.beta(0)[1]
+                ring.optics.local_beta[1]
                 if plane == "vertical"
-                else ring.optics.beta(0)[1]
+                else ring.optics.local_beta[0]
             )
             beta_delphi = ring.L / tune / 2 / np.pi
             coefZ *= beta_mbtrack2 / beta_delphi
@@ -346,7 +346,7 @@ if __name__ == "__main__":
             min_value=args.min_value,
             max_value=args.max_value,
             n_scan_points=args.n_scan_points,
-            M=args.M,
+            M=416,
             n_max=args.n_max,
             n_min=args.n_max - 2,
             Q_s=args.Q_s,
