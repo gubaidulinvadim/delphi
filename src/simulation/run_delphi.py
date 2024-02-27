@@ -221,16 +221,11 @@ def run_chroma_scan(
                 Q=tune,
                 particle="electron",
             )
-<<<<<<< HEAD:run_delphi.py
             beta_mbtrack2 = (
                 ring.optics.local_beta[1]
                 if plane == "vertical"
                 else ring.optics.local_beta[0]
             )
-=======
-            beta_mbtrack2 = (ring.optics.beta(0)[1] if plane == "vertical" else
-                             ring.optics.beta(0)[1])
->>>>>>> d0c874a (Restructured everything into folders for source code, data, etc.):src/simulation/run_delphi.py
             beta_delphi = ring.L / tune / 2 / np.pi
             coefZ *= beta_mbtrack2 / beta_delphi
             (
