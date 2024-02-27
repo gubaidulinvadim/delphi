@@ -1,3 +1,6 @@
+import sys, os
+
+sys.path.append('../../')
 from DELPHI import *
 from SOLEILII_parameters.SOLEILII_TDR_parameters import *
 from scipy.constants import pi
@@ -42,17 +45,15 @@ def run_bunch_current_scan(
     Ib = 1e-3 * np.linspace(min_value, max_value, n_scan_points)
     omega_ksi = Qp / ring.ac * ring.omega0
     kmax = 5
-    results = pd.DataFrame(
-        columns=[
-            "BunchCurrent",
-            "eigvals_re",
-            "eigvals_im",
-            "Qp",
-            "BunchLength",
-            "nx",
-            "ID_state",
-        ]
-    )
+    results = pd.DataFrame(columns=[
+        "BunchCurrent",
+        "eigvals_re",
+        "eigvals_im",
+        "Qp",
+        "BunchLength",
+        "nx",
+        "ID_state",
+    ])
     eigvecs_list = []
     for nx in range(n_min, n_max + 1):
         for i, bunch_current in enumerate(tqdm(Ib)):
@@ -64,10 +65,8 @@ def run_bunch_current_scan(
                 taub = 4 * sigmas
             except:
                 print(
-                    "No valid filename for bunch length. Using default bunch length {:.1e} ps".format(
-                        sigma_z / 1e-12
-                    )
-                )
+                    "No valid filename for bunch length. Using default bunch length {:.1e} ps"
+                    .format(sigma_z / 1e-12))
                 taub = 4 * sigma_z
             g0, a, b = longdistribution_decomp(taub, typelong="Gaussian")
             coefdamper, coefZ = computes_coef(
@@ -138,9 +137,9 @@ def run_bunch_current_scan(
                 results = pd.concat([results, result], ignore_index=True)
             eigvecs_list.append(eigvecs)
     results.to_csv(
-        path_or_buf="delphi(taub={:.1e},ID={:},plane={:},Qp={:},M={:},Q_s={:.1e},n_max={:}).csv".format(
-            taub, ID_state, plane, Qp, M, Q_s, n_max
-        ),
+        path_or_buf=
+        "delphi(taub={:.1e},ID={:},plane={:},Qp={:},M={:},Q_s={:.1e},n_max={:}).csv"
+        .format(taub, ID_state, plane, Qp, M, Q_s, n_max),
         sep="\t",
     )
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Qp={:}).npy'.format(
@@ -168,17 +167,15 @@ def run_chroma_scan(
     tune = ring.tune[0] if plane == "horizontal" else ring.tune[1]
     taub = 4 * sigma_z
     kmax = 5
-    results = pd.DataFrame(
-        columns=[
-            "BunchCurrent",
-            "eigvals_re",
-            "eigvals_im",
-            "Qp",
-            "BunchLength",
-            "nx",
-            "ID_state",
-        ]
-    )
+    results = pd.DataFrame(columns=[
+        "BunchCurrent",
+        "eigvals_re",
+        "eigvals_im",
+        "Qp",
+        "BunchLength",
+        "nx",
+        "ID_state",
+    ])
     # results_h5py = hp.File('delphi_resultssigma_z={:.1e},plane={:},Ib={:}).h5'.format(
     # sigma_z, plane, Ib), 'w')
 
@@ -205,10 +202,8 @@ def run_chroma_scan(
                 taub = 4 * sigmas
             except:
                 print(
-                    "No valid filename for bunch length. Using default bunch length {:.1e} ps".format(
-                        sigma_z / 1e-12
-                    )
-                )
+                    "No valid filename for bunch length. Using default bunch length {:.1e} ps"
+                    .format(sigma_z / 1e-12))
                 taub = 4 * sigma_z
             g0, a, b = longdistribution_decomp(taub, typelong="Gaussian")
             omega_ksi = Qp / ring.ac * ring.omega0
@@ -226,11 +221,16 @@ def run_chroma_scan(
                 Q=tune,
                 particle="electron",
             )
+<<<<<<< HEAD:run_delphi.py
             beta_mbtrack2 = (
                 ring.optics.local_beta[1]
                 if plane == "vertical"
                 else ring.optics.local_beta[0]
             )
+=======
+            beta_mbtrack2 = (ring.optics.beta(0)[1] if plane == "vertical" else
+                             ring.optics.beta(0)[1])
+>>>>>>> d0c874a (Restructured everything into folders for source code, data, etc.):src/simulation/run_delphi.py
             beta_delphi = ring.L / tune / 2 / np.pi
             coefZ *= beta_mbtrack2 / beta_delphi
             (
@@ -280,9 +280,9 @@ def run_chroma_scan(
                 results = pd.concat([results, result], ignore_index=True)
             eigvecs_list.append(eigvecs)
     results.to_csv(
-        path_or_buf="delphi(taub={:.1e},ID={:},plane={:},Ib={:},M={:},Q_s={:.1e},n_max={:}).csv".format(
-            taub, ID_state, plane, Ib, M, Q_s, n_max
-        ),
+        path_or_buf=
+        "delphi(taub={:.1e},ID={:},plane={:},Ib={:},M={:},Q_s={:.1e},n_max={:}).csv"
+        .format(taub, ID_state, plane, Ib, M, Q_s, n_max),
         sep="\t",
     )
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Ib={:}).npy'.format(

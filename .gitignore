@@ -1,8 +1,4 @@
 /Z.dat
-/delphi(sigma_z=1.5e-11,plane=vertical,Qp=0.0).csv
-/delphi(sigma_z=9.0e-12,plane=vertical,Ib=0.0012).csv
-/delphi(sigma_z=9.0e-12,plane=vertical,Qp=0.0).csv
-/delphi(sigma_z=9.0e-12,plane=y,Qp=0.0).csv
 /input.dat
 /input_new.dat
 /out_val.dat
