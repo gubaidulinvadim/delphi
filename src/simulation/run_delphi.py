@@ -1,6 +1,6 @@
 import sys, os
 
-sys.path.append('../../')
+sys.path.append('/home/dockeruser/delphi/')
 from DELPHI import *
 from SOLEILII_parameters.SOLEILII_TDR_parameters import *
 from scipy.constants import pi
@@ -20,10 +20,20 @@ def read_impedance(filename):
     Z = np.vstack((Zre, Zim)).T
     return freqs, Z
 
+def get_and_interpolate_sigmas(file_path, current, is_sigma_z=False):
+    try:
+        df_input = np.loadtxt(file_path, delimiter='\t', usecols=(1, 2, 3), dtype=np.float64, skiprows=1)
+        (I, sigmas, sigmadp) = df_input.T
+        sigma = interp1d(I*1e-3, sigmas, kind="linear")(current)
+        sigma_dp = interp1d(I*1e-3, sigmadp, kind="linear")(current)
+        return sigma, sigma_dp
+    except FileNotFoundError:
+        print(f"No valid filename for {'bunch length' if is_sigma_z else 'impedance'}.")
+        return None, None
 
 def run_bunch_current_scan(
     impedance_filename="Zydip.dat",
-    ID_state="open",
+    id_state="open",
     sigma_z_filename="sigmaz.npy",
     sigma_z=9e-12,
     plane="vertical",
@@ -35,10 +45,12 @@ def run_bunch_current_scan(
     Q_s=0.0021,
     n_max=0,
     n_min=0,
+    damper_gain=0,
+    impedance_multiplier=2,
 ):
-    freqs, Z = read_impedance("/home/dockeruser/delphi/" + impedance_filename)
-    # freqs, Z = read_impedance(impedance_filename)
-    ring = v2366_v2(IDs=ID_state)
+    freqs, Z = read_impedance("/home/dockeruser/delphi/input/" + impedance_filename)
+    Z *= impedance_multiplier
+    ring = v2366_v2(IDs=id_state)
     tune = ring.tune[0] if plane == "horizontal" else ring.tune[1]
 
     taub = 4 * sigma_z
@@ -52,31 +64,44 @@ def run_bunch_current_scan(
         "Qp",
         "BunchLength",
         "nx",
-        "ID_state",
-    ])
+        "id_state",
+        "damper_gain",
+        "damper_phase",
+        "impedance_multiplier",
+            ])
     eigvecs_list = []
     for nx in range(n_min, n_max + 1):
+        print(f'Coupled-bunch mode {nx}')
         for i, bunch_current in enumerate(tqdm(Ib)):
             Nb = bunch_current / e / ring.f0
-            try:
-                sigmas = np.load("/home/dockeruser/delphi/" + sigma_z_filename)
-                I = 1e-3 * np.linspace(1, 10, 51)
-                sigma = interp1d(I, sigmas, kind="linear")(bunch_current)
-                taub = 4 * sigmas
-            except:
-                print(
-                    "No valid filename for bunch length. Using default bunch length {:.1e} ps"
-                    .format(sigma_z / 1e-12))
-                taub = 4 * sigma_z
+            # try:
+            #     df_input = np.loadtxt('/home/dockeruser/delphi/input/'+sigma_z_filename, delimiter='\t', usecols=(1, 2, 3), dtype=np.float64, skiprows=1)
+            #     (I, sigmas, sigmadp) = df_input.T
+            #     sigma = interp1d(I*1e-3, sigmas, kind="linear")(bunch_current)
+            #     sigma_dp = interp1d(I*1e-3, sigmadp, kind="linear")(bunch_current)
+            #     taub = 4 * sigma
+            #     Q_s = ring.ac*sigma_dp/sigma/ring.omega0
+            #     print('BUNCH LENGTH IS ', taub)
+            # except:
+            #     print(
+            #         "No valid filename for bunch length. Using default bunch length {:.1e} ps"
+            #         .format(sigma_z / 1e-12))
+            #     taub = 4 * sigma_z
+            sigma, sigma_dp = get_and_interpolate_sigmas(sigma_z_filename, bunch_current, is_sigma_z=True)
+            if sigma is None:
+                sigma_ = sigma_z
+            taub = 4 * sigma
             g0, a, b = longdistribution_decomp(taub, typelong="Gaussian")
+            print(g0, a, b)
+            damper_phase = 0#-np.pi/2
             coefdamper, coefZ = computes_coef(
                 f0=ring.f0,
-                dmax=0,
+                dmax=damper_gain,
                 b=b,
-                g0=g0,
-                dnormfactor=np.infty,
+                g0=g0[0],
+                dnormfactor=1,
                 taub=taub,
-                dphase=0,
+                dphase=damper_phase,
                 M=M,
                 Nb=Nb,
                 gamma=ring.gamma,
@@ -112,9 +137,10 @@ def run_bunch_current_scan(
                 kmax=kmax,
                 freqZ=freqs,
                 coefdamper=coefdamper,
+                # flag_trapz=True,
                 coefZ=coefZ,
                 omegas=Q_s * ring.omega0,
-                flageigenvect=True,
+                flageigenvect=False,
                 optimized_convergence=True,
                 lmaxold=-1,
                 nmaxold=-1,
@@ -130,7 +156,10 @@ def run_bunch_current_scan(
                         "Qp": Qp,
                         "BunchLength": taub,
                         "nx": nx,
-                        "ID_state": ID_state,
+                        "id_state": id_state,
+                        "damper_gain": damper_gain,
+                        "damper_phase": damper_phase,
+                        "impedance_multiplier": impedance_multiplier
                     },
                     index=[k],
                 )
@@ -138,8 +167,8 @@ def run_bunch_current_scan(
             eigvecs_list.append(eigvecs)
     results.to_csv(
         path_or_buf=
-        "delphi(taub={:.1e},ID={:},plane={:},Qp={:},M={:},Q_s={:.1e},n_max={:}).csv"
-        .format(taub, ID_state, plane, Qp, M, Q_s, n_max),
+        "/home/dockeruser/delphi/data/delphi(sigma_z={:.1e},ID={:},plane={:},Qp={:},M={:},Q_s={:.1e},n_max={:},damper_gain={:.1e},ximpedance={:.1f}).csv"
+        .format(taub/4, id_state, plane, Qp, M, Q_s, n_max, damper_gain, impedance_multiplier),
         sep="\t",
     )
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Qp={:}).npy'.format(
@@ -150,7 +179,7 @@ def run_bunch_current_scan(
 def run_chroma_scan(
     impedance_filename="Zydip.dat",
     sigma_z_filename="sigmaz.npy",
-    ID_state="open",
+    id_state="open",
     sigma_z=9e-12,
     plane="vertical",
     Ib=1.2e-3,
@@ -161,9 +190,12 @@ def run_chroma_scan(
     Q_s=0.0021,
     n_max=0,
     n_min=0,
+    damper_gain=0,
+    impedance_multiplier=1,
 ):
-    freqs, Z = read_impedance("/home/dockeruser/delphi/" + impedance_filename)
-    ring = v2366_v2(IDs=ID_state)
+    freqs, Z = read_impedance("/home/dockeruser/delphi/input/" + impedance_filename)
+    Z *= impedance_multiplier
+    ring = v2366_v2(IDs=id_state)
     tune = ring.tune[0] if plane == "horizontal" else ring.tune[1]
     taub = 4 * sigma_z
     kmax = 5
@@ -174,32 +206,22 @@ def run_chroma_scan(
         "Qp",
         "BunchLength",
         "nx",
-        "ID_state",
+        "id_state",
     ])
-    # results_h5py = hp.File('delphi_resultssigma_z={:.1e},plane={:},Ib={:}).h5'.format(
-    # sigma_z, plane, Ib), 'w')
-
-    # bunch_current_ds = results_h5py.create_dataset(
-    #     'BunchCurrent', (n_scan_points,), dtype='f')
-    # eigvals_re_ds = results_h5py.create_dataset(
-    #     'eigvals_re', (n_scan_points, kmax), dtype='f')
-    # eigvals_im_ds = results_h5py.create_dataset(
-    #     'eigvals_im', (n_scan_points, kmax), dtype='f')
-    # Qp_ds = results_h5py.create_dataset('Qp', (n_scan_points,), dtype='f')
-    # bunch_length_ds = results_h5py.create_dataset(
-    #     'BunchLength', (n_scan_points,), dtype='f')
-    # eigvecs_group = results_h5py.create_group('Eigenvectors')
 
     chroma = np.linspace(min_value, max_value, n_scan_points)
-    Nb = 1e-3 * Ib / e / ring.f0
+    Nb = Ib / e / ring.f0
     eigvecs_list = []
     for nx in range(n_min, n_max + 1):
+        print(f'Coupled-bunch mode {nx}')
         for i, Qp in enumerate(tqdm(chroma)):
             try:
-                sigmas = np.load("/home/dockeruser/delphi/" + sigma_z_filename)
-                I = 1e-3 * np.linspace(1, 10, 51)
-                sigma = interp1d(I, sigmas, kind="linear")(bunch_current)
-                taub = 4 * sigmas
+                df_input = np.loadtxt('/home/dockeruser/delphi/input/'+sigma_z_filename, delimiter='\t', usecols=(1, 2, 3), dtype=np.float64, skiprows=1)
+                (I, sigmas, sigmadp) = df_input.T
+                sigma = interp1d(I*1e-3, sigmas, kind="linear")(Ib)
+                sigma_dp = interp1d(I*1e-3, sigmadp, kind="linear")(Ib)
+                Q_s = ring.ac*sigma_dp/sigma/ring.omega0
+                taub = 4 * sigma
             except:
                 print(
                     "No valid filename for bunch length. Using default bunch length {:.1e} ps"
@@ -207,14 +229,15 @@ def run_chroma_scan(
                 taub = 4 * sigma_z
             g0, a, b = longdistribution_decomp(taub, typelong="Gaussian")
             omega_ksi = Qp / ring.ac * ring.omega0
+            damper_phase = 0#-np.pi/2
             coefdamper, coefZ = computes_coef(
                 f0=ring.f0,
-                dmax=0,
+                dmax=damper_gain,
                 b=b,
                 g0=g0,
-                dnormfactor=np.infty,
+                dnormfactor=1,
                 taub=taub,
-                dphase=0,
+                dphase=damper_phase,
                 M=M,
                 Nb=Nb,
                 gamma=ring.gamma,
@@ -262,22 +285,26 @@ def run_chroma_scan(
             for k in range(len(eigvals)):
                 result = pd.DataFrame(
                     {
-                        "BunchCurrent": Ib,
+                        "bunch_current": Ib,
                         "eigvals_re": np.real(eigvals[k]) / ring.omega0,
                         "eigvals_im": np.imag(eigvals[k]) / ring.omega0,
-                        "Qp": Qp,
-                        "BunchLength": taub,
-                        "nx": nx,
-                        "ID_state": ID_state,
+                        "chromaticity": Qp,
+                        "rms_bunch_length": taub/4,
+                        "coupled_bunch_mode": nx,
+                        "n_bunches": M,
+                        "id_state": id_state,
+                        "damper_gain": damper_gain,
+                        "damper_phase": damper_phase,
+                        "impedance_multiplier": impedance_multiplier
                     },
-                    index=[k],
+                    index=[k]
                 )
                 results = pd.concat([results, result], ignore_index=True)
             eigvecs_list.append(eigvecs)
     results.to_csv(
         path_or_buf=
-        "delphi(taub={:.1e},ID={:},plane={:},Ib={:},M={:},Q_s={:.1e},n_max={:}).csv"
-        .format(taub, ID_state, plane, Ib, M, Q_s, n_max),
+        "/home/dockeruser/delphi/data/delphi(sigma_z={:.1e},id={:},plane={:},Ib={:.1e},M={:},Q_s={:.1e},n_max={:},damper_gain={:.1e},impedance_multiplier={:.1f}).csv"
+        .format(taub/4, id_state, plane, Ib, M, Q_s, n_max, damper_gain, impedance_multiplier),
         sep="\t",
     )
     # np.save('delphi_eigvecs(sigma_z={:.1e},plane={:},Ib={:}).npy'.format(
@@ -286,12 +313,13 @@ def run_chroma_scan(
 
 
 if __name__ == "__main__":
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
     parser = get_parser_for_delphi()
     args = parser.parse_args()
     if args.scan_type == "sb_chromaticity":
         run_chroma_scan(
             impedance_filename=args.filename,
-            ID_state=args.ID_state,
+            id_state=args.id_state,
             sigma_z=args.sigma_z,
             plane=args.plane,
             Ib=args.current,
@@ -299,13 +327,16 @@ if __name__ == "__main__":
             max_value=args.max_value,
             n_scan_points=args.n_scan_points,
             Q_s=args.Q_s,
+            M=1,
             sigma_z_filename=args.sigmas_filename,
+            damper_gain=args.damper_gain,
+            impedance_multiplier=args.impedance_multiplier
         )
     elif args.scan_type == "sb_current":
         print("running a single bunch current scan")
         run_bunch_current_scan(
             impedance_filename=args.filename,
-            ID_state=args.ID_state,
+            id_state=args.id_state,
             sigma_z=args.sigma_z,
             plane=args.plane,
             Qp=args.chromaticity,
@@ -314,38 +345,46 @@ if __name__ == "__main__":
             n_scan_points=args.n_scan_points,
             Q_s=args.Q_s,
             sigma_z_filename=args.sigmas_filename,
+            damper_gain=args.damper_gain,
+            impedance_multiplier=args.impedance_multiplier
         )
     elif args.scan_type == "mb_chromaticity":
         run_chroma_scan(
             impedance_filename=args.filename,
-            ID_state=args.ID_state,
+            id_state=args.id_state,
             sigma_z=args.sigma_z,
             plane=args.plane,
             Ib=args.current,
             min_value=args.min_value,
             max_value=args.max_value,
             n_scan_points=args.n_scan_points,
-            M=416,
+            M=args.n_max+1,
             n_max=args.n_max,
-            n_min=args.n_max - 2,
+            n_min=0,
             Q_s=args.Q_s,
             sigma_z_filename=args.sigmas_filename,
+            damper_gain=args.damper_gain,
+            impedance_multiplier=args.impedance_multiplier
+
         )
     elif args.scan_type == "mb_current":
         run_bunch_current_scan(
             impedance_filename=args.filename,
-            ID_state=args.ID_state,
+            id_state=args.id_state,
             sigma_z=args.sigma_z,
             plane=args.plane,
             Qp=args.chromaticity,
             min_value=args.min_value,
             max_value=args.max_value,
             n_scan_points=args.n_scan_points,
-            M=416,
+            M=args.n_max+1,
             n_max=args.n_max,
-            n_min=args.n_max - 2,
+            n_min=0,
             Q_s=args.Q_s,
             sigma_z_filename=args.sigmas_filename,
+            damper_gain=args.damper_gain,
+            impedance_multiplier=args.impedance_multiplier  
+
         )
     else:
         print("Scan type is not supported.")

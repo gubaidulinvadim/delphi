@@ -16,7 +16,7 @@ def get_parser_for_delphi():
         help='Impedance filename. Three columns (frequencies, real part and imag part) file with tabs as separators. Defaults to "Zydip.dat".',
     )
     parser.add_argument(
-        "--ID_state",
+        "--id_state",
         action="store",
         metavar="ID_STATE",
         type=str,
@@ -116,5 +116,21 @@ def get_parser_for_delphi():
         type=int,
         default=416,
         help="Number of bunches in the beam. Defaults to 416.",
+    )
+
+    parser.add_argument(
+        "--damper_gain",
+        action="store",
+        type=float,
+        default=0,
+        help="Damping time in turns. Defaults to 0",
+    )
+
+    parser.add_argument(
+        "--impedance_multiplier",
+        action="store",
+        type=float,
+        default=1.0,
+        help="Impedance scaling factor. Defaults to 1",
     )
     return parser
